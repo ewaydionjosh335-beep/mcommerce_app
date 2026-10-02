@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "892297974604",
+    "project_id": "big4-mcommerce-dad76",
+    "storage_bucket": "big4-mcommerce-dad76.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:892297974604:android:24f6c6287fd698b8d775e9",
+        "android_client_info": {
+          "package_name": "com.example.mcommerce_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBvUohencMU8TBoXn2ojKP6gcYYugJSmzs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
