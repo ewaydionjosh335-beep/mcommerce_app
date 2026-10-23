@@ -38,6 +38,16 @@ class CartProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Decrease Quantity (remove at 0 or when quantity becomes 0)
+  void decreaseQuantity(CartItem item) {
+    if (item.quantity > 1) {
+      item.quantity--;
+    } else {
+      _items.remove(item);
+    }
+    notifyListeners();
+  }
+
   // Remove Item
   void removeItem(CartItem item) {
     _items.remove(item);

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/validation_exception.dart';
 
 // Product Model: turns a Firestore document into a Dart object
 class Product {
@@ -34,16 +35,43 @@ class Product {
     return 0;
   }
 
-  factory Product.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data() ?? {};
+  factory Product.fromMap(String id, Map<String, dynamic>? data) {
+    final d = data ?? {};
     return Product(
-      id: doc.id,
-      productName: (data['productName'] ?? '').toString(),
-      price: _toDouble(data['price']),
-      description: (data['description'] ?? '').toString(),
-      imageUrl: (data['imageUrl'] ?? '').toString(),
-      stock: _toInt(data['stock']),
-      category: (data['category'] ?? 'General').toString(),
+      id: id,
+      productName: (d['productName'] ?? '').toString(),
+      price: _toDouble(d['price']),
+      description: (d['description'] ?? '').toString(),
+      imageUrl: (d['imageUrl'] ?? '').toString(),
+      stock: _toInt(d['stock']),
+      category: (d['category'] ?? 'General').toString(),
     );
+  }
+
+  factory Product.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+    return Product.fromMap(doc.id, doc.data());
+  }
+
+  static void validateProduct({
+    required String productName,
+    required String description,
+    required double price,
+    required int stock,
+    required String imageUrl,
+  }) {
+    if (productName.trim().isEmpty ||
+        description.trim().isEmpty ||
+        imageUrl.trim().isEmpty) {
+      throw ValidationException('All fields are required');
+    }
+    if (price.isNaN || price.isInfinite || price <= 0) {
+      throw ValidationException('Price must be greater than 0');
+    }
+    if (stock < 0) {
+      throw ValidationException('Stock cannot be negative');
+    }
+    if (!imageUrl.trim().startsWith('http')) {
+      throw ValidationException('Image URL must start with http');
+    }
   }
 }

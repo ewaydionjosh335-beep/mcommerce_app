@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/product.dart';
 import '../utils/logger.dart';
-import '../utils/validation_exception.dart';
 
 // Flutter Service: full CRUD on the products collection
 class ProductService {
@@ -38,20 +37,13 @@ class ProductService {
     required int stock,
     required String imageUrl,
   }) {
-    if (productName.trim().isEmpty ||
-        description.trim().isEmpty ||
-        imageUrl.trim().isEmpty) {
-      throw ValidationException('All fields are required');
-    }
-    if (price.isNaN || price.isInfinite || price <= 0) {
-      throw ValidationException('Price must be greater than 0');
-    }
-    if (stock < 0) {
-      throw ValidationException('Stock cannot be negative');
-    }
-    if (!imageUrl.trim().startsWith('http')) {
-      throw ValidationException('Image URL must start with http');
-    }
+    Product.validateProduct(
+      productName: productName,
+      description: description,
+      price: price,
+      stock: stock,
+      imageUrl: imageUrl,
+    );
   }
 
   // CREATE
