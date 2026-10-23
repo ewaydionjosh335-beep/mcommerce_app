@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../widgets/async_state_view.dart';
+import '../utils/status_helpers.dart';
 
 // HOA04: User Monitoring (list of registered users + customer profile inspector)
 class UsersSection extends StatefulWidget {
@@ -320,7 +321,7 @@ class CustomerDetailsDialog extends StatelessWidget {
                                         color: Colors.indigo.shade50,
                                         borderRadius: BorderRadius.circular(8),
                                       ),
-                                      child: Text(status.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.indigo.shade700)),
+                                       child: Text(status.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: StatusHelpers.statusColor(context, status))),
                                     ),
                                   ],
                                 ),

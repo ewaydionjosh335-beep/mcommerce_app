@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../utils/logger.dart';
+import '../utils/status_helpers.dart';
 import '../widgets/async_state_view.dart';
 
 // HOA04 Activity 3: Order Management (display orders + update status)
@@ -13,21 +14,6 @@ class OrdersSection extends StatefulWidget {
 
 class _OrdersSectionState extends State<OrdersSection> {
   static const _statuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
-
-  MaterialColor _statusColor(String status) {
-    switch (status) {
-      case 'delivered':
-        return Colors.green;
-      case 'shipped':
-        return Colors.blue;
-      case 'processing':
-        return Colors.orange;
-      case 'cancelled':
-        return Colors.red;
-      default:
-        return Colors.indigo;
-    }
-  }
 
   final Stream<QuerySnapshot<Map<String, dynamic>>> _orders = FirebaseFirestore
       .instance
@@ -171,18 +157,18 @@ class _OrdersSectionState extends State<OrdersSection> {
                              Container(
                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                decoration: BoxDecoration(
-                                 color: _statusColor(status).shade50,
-                                 borderRadius: BorderRadius.circular(12),
-                                 border: Border.all(
-                                   color: _statusColor(status).shade200,
-                                 ),
-                               ),
+                                  color: StatusHelpers.statusColor(context, status).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: StatusHelpers.statusColor(context, status).withValues(alpha: 0.4),
+                                  ),
+                                ),
                                child: DropdownButton<String>(
                                  value: status,
                                  underline: const SizedBox.shrink(),
                                  dropdownColor: Colors.white,
                                  style: TextStyle(
-                                   color: _statusColor(status).shade800,
+                                    color: StatusHelpers.statusColor(context, status),
                                    fontWeight: FontWeight.bold,
                                    fontSize: 13,
                                  ),

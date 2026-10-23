@@ -3,26 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../screens/login_screen.dart';
 import '../utils/logger.dart';
+import '../utils/status_helpers.dart';
 
 class MyOrdersScreen extends StatelessWidget {
   const MyOrdersScreen({super.key});
-
-  MaterialColor _statusColor(String status) {
-    switch (status) {
-      case 'delivered':
-        return Colors.green;
-      case 'shipped':
-        return Colors.blue;
-      case 'processing':
-        return Colors.orange;
-      case 'cancelled':
-        return Colors.red;
-      default:
-        return Colors.indigo;
-    }
-  }
-
-  String _label(String s) => s.isEmpty ? '' : s[0].toUpperCase() + s.substring(1);
 
   Future<void> _cancelOrder(BuildContext context, String orderId) async {
     final confirmed = await showDialog<bool>(
@@ -185,7 +169,7 @@ class MyOrdersScreen extends StatelessWidget {
             final paymentMethod = (data['paymentMethod'] as String?) ?? 'Cash on Delivery (COD)';
             final items = (data['items'] as List?) ?? [];
 
-            final color = _statusColor(status);
+            final color = StatusHelpers.statusColor(context, status);
 
             return Card(
               margin: const EdgeInsets.only(bottom: 16),
@@ -205,14 +189,14 @@ class MyOrdersScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: color.shade50,
+                             color: color.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: color.shade200),
+                            border: Border.all(color: color.withValues(alpha: 0.4)),
                           ),
                           child: Text(
-                            _label(status),
+                             StatusHelpers.statusLabel(status),
                             style: TextStyle(
-                              color: color.shade800,
+                              color: color,
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
                             ),
@@ -305,3 +289,4 @@ class MyOrdersScreen extends StatelessWidget {
     );
   }
 }
+
