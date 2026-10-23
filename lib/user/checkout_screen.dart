@@ -58,6 +58,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
+  @override
+  void dispose() {
+    _addressController.dispose();
+    _phoneController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
   void _show(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
