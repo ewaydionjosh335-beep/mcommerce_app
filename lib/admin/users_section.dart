@@ -167,8 +167,8 @@ class CustomerDetailsDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final name = (userData['name'] as String?) ?? '—';
     final email = (userData['email'] as String?) ?? '—';
-    final phone = (userData['phone'] as String?) ?? (userData['phoneNumber'] as String?) ?? '—';
-    final address = (userData['address'] as String?) ?? (userData['shippingAddress'] as String?) ?? '—';
+    final phone = userData['phone']?.toString() ?? userData['phoneNumber']?.toString() ?? '—';
+    final address = userData['address']?.toString() ?? userData['shippingAddress']?.toString() ?? '—';
     final role = (userData['role'] ?? 'user').toString();
 
     return AlertDialog(

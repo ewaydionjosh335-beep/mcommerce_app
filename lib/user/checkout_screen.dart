@@ -46,10 +46,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         final data = doc.data() ?? {};
         setState(() {
           if (_addressController.text.isEmpty) {
-            _addressController.text = (data['address'] as String?) ?? (data['shippingAddress'] as String?) ?? '';
+            _addressController.text = data['address']?.toString() ?? data['shippingAddress']?.toString() ?? '';
           }
           if (_phoneController.text.isEmpty) {
-            _phoneController.text = (data['phone'] as String?) ?? (data['phoneNumber'] as String?) ?? '';
+            _phoneController.text = data['phone']?.toString() ?? data['phoneNumber']?.toString() ?? '';
           }
         });
       }

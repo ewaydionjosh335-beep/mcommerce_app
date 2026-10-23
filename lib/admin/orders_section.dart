@@ -237,7 +237,8 @@ class _CustomerNameState extends State<_CustomerName> {
       final doc =
           await FirebaseFirestore.instance.collection('users').doc(uid).get();
       return (doc.data()?['name'] as String?) ?? 'Unknown';
-    } catch (_) {
+    } catch (e, s) {
+      logError('OrdersCustomerName', e, s);
       return 'Unknown';
     }
   }

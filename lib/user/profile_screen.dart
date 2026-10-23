@@ -54,8 +54,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (doc.exists) {
         final data = doc.data() ?? {};
         _nameController.text = (data['name'] as String?) ?? '';
-        _phoneController.text = (data['phone'] as String?) ?? (data['phoneNumber'] as String?) ?? '';
-        _addressController.text = (data['address'] as String?) ?? (data['shippingAddress'] as String?) ?? '';
+        _phoneController.text = data['phone']?.toString() ?? data['phoneNumber']?.toString() ?? '';
+        _addressController.text = data['address']?.toString() ?? data['shippingAddress']?.toString() ?? '';
       }
     } catch (e, s) {
       logError('Profile', e, s);

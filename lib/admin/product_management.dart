@@ -223,6 +223,7 @@ class _ProductManagementState extends State<ProductManagement> {
       await _service.deleteProduct(product.id);
       if (mounted) _snack('Product deleted');
     } on FirebaseException catch (e) {
+      logError('ProductDelete', e);
       if (mounted) _snack(e.message ?? 'Failed to delete product');
     }
   }

@@ -180,8 +180,8 @@ class MyOrdersScreen extends StatelessWidget {
             final data = doc.data();
             final total = ((data['total'] as num?) ?? 0).toDouble();
             final status = (data['status'] ?? 'pending').toString().toLowerCase();
-            final address = (data['shippingAddress'] as String?) ?? 'N/A';
-            final phone = (data['phoneNumber'] as String?) ?? 'N/A';
+            final address = data['shippingAddress']?.toString() ?? 'N/A';
+            final phone = data['phoneNumber']?.toString() ?? 'N/A';
             final paymentMethod = (data['paymentMethod'] as String?) ?? 'Cash on Delivery (COD)';
             final items = (data['items'] as List?) ?? [];
 
