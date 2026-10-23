@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import '../models/product.dart';
 
@@ -15,14 +16,18 @@ class CartItem {
 // notifyListeners() makes every screen that watches the cart rebuild.
 class CartProvider extends ChangeNotifier {
   final List<CartItem> _items = [];
+  final FirebaseAuth? _auth;
   StreamSubscription<User?>? _authSub;
 
-  CartProvider() {
-    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
-      if (user == null) {
-        clear();
-      }
-    });
+  CartProvider({FirebaseAuth? auth}) : _auth = auth ?? (Firebase.apps.isNotEmpty ? FirebaseAuth.instance : null) {
+    final authInstance = _auth;
+    if (authInstance != null) {
+      _authSub = authInstance.authStateChanges().listen((user) {
+        if (user == null) {
+          clear();
+        }
+      });
+    }
   }
 
   List<CartItem> get items => List.unmodifiable(_items);
