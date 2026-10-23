@@ -54,20 +54,39 @@ class WishlistScreen extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
-                      width: 72,
-                      height: 72,
-                      child: Image.network(
-                        product.imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          color: Colors.grey.shade100,
-                          child: const Icon(Icons.image_not_supported),
+                  Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: SizedBox(
+                          width: 72,
+                          height: 72,
+                          child: Image.network(
+                            product.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              color: Colors.grey.shade100,
+                              child: const Icon(Icons.image_not_supported),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                      if (product.stock == 0)
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            color: Colors.red.shade600,
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: const Text(
+                              'Out of stock',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -100,19 +119,21 @@ class WishlistScreen extends StatelessWidget {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.shopping_cart_outlined, size: 20),
-                        color: Colors.indigo,
-                        tooltip: 'Add to Cart',
-                        onPressed: () {
-                          cart.addToCart(product);
-                          wishlist.removeProduct(product.id);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('${product.productName} added to cart'),
-                              behavior: SnackBarBehavior.floating,
-                              duration: const Duration(seconds: 1),
-                            ),
-                          );
-                        },
+                        color: product.stock == 0 ? Colors.grey : Colors.indigo,
+                        tooltip: product.stock == 0 ? 'Out of stock' : 'Add to Cart',
+                        onPressed: product.stock == 0
+                            ? null
+                            : () {
+                                cart.addToCart(product);
+                                wishlist.removeProduct(product.id);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('${product.productName} added to cart'),
+                                    behavior: SnackBarBehavior.floating,
+                                    duration: const Duration(seconds: 1),
+                                  ),
+                                );
+                              },
                       ),
                       IconButton(
                         icon: const Icon(Icons.delete_outline, size: 20),

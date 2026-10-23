@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/product.dart';
+import '../providers/cart_provider.dart';
 import '../providers/wishlist_provider.dart';
 import '../screens/login_screen.dart';
 import '../utils/logger.dart';
@@ -49,6 +50,22 @@ class ProductCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (product.stock == 0)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade600,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'Out of stock',
+                          style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
                     Positioned(
                     top: 8,
                     right: 8,
@@ -178,13 +195,55 @@ class ProductCard extends StatelessWidget {
                           color: Colors.indigo.shade700,
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.indigo.shade50,
-                          borderRadius: BorderRadius.circular(8),
+                      GestureDetector(
+                        onTap: product.stock == 0
+                            ? null
+                            : () {
+                                final user = FirebaseAuth.instance.currentUser;
+                                if (user == null) {
+                                  showDialog(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: const Text('Sign up / Login first'),
+                                      content: const Text('You need to log in or register to add items to your cart.'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(ctx),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () async {
+                                            Navigator.pop(ctx);
+                                            await LoginScreen.showAsModal(context);
+                                          },
+                                          child: const Text('Log In / Register'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  return;
+                                }
+                                context.read<CartProvider>().addToCart(product);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('${product.productName} added to cart'),
+                                    behavior: SnackBarBehavior.floating,
+                                    duration: const Duration(seconds: 1),
+                                  ),
+                                );
+                              },
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: product.stock == 0 ? Colors.grey.shade200 : Colors.indigo.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.add,
+                            size: 16,
+                            color: product.stock == 0 ? Colors.grey : Colors.indigo.shade700,
+                          ),
                         ),
-                        child: Icon(Icons.add, size: 16, color: Colors.indigo.shade700),
                       ),
                     ],
                   ),

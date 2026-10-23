@@ -23,19 +23,24 @@ class CartProvider extends ChangeNotifier {
 
   // Step 6: Add to Cart logic
   void addToCart(Product product) {
+    if (product.stock <= 0) return;
     final index = _items.indexWhere((item) => item.product.id == product.id);
     if (index >= 0) {
-      _items[index].quantity++;
+      if (_items[index].quantity < product.stock) {
+        _items[index].quantity++;
+      }
     } else {
-      _items.add(CartItem(product: product));
+      _items.add(CartItem(product: product, quantity: 1));
     }
     notifyListeners();
   }
 
   // Increase Quantity
   void increaseQuantity(CartItem item) {
-    item.quantity++;
-    notifyListeners();
+    if (item.quantity < item.product.stock) {
+      item.quantity++;
+      notifyListeners();
+    }
   }
 
   // Decrease Quantity (remove at 0 or when quantity becomes 0)

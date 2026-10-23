@@ -103,34 +103,42 @@ class _CartScreenState extends State<CartScreen> {
                           ],
                         ),
                       ),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade200),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.remove, size: 18),
+                                onPressed: () => cart.decreaseQuantity(item),
+                                color: Colors.indigo,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                              ),
+                              Text(
+                                '${item.quantity}',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.add, size: 18),
+                                onPressed: item.quantity < item.product.stock
+                                    ? () => cart.increaseQuantity(item)
+                                    : null,
+                                color: item.quantity < item.product.stock ? Colors.indigo : Colors.grey,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, size: 18),
+                                onPressed: () => cart.removeItem(item),
+                                color: Colors.red.shade400,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                              ),
+                            ],
+                          ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.add, size: 18),
-                              onPressed: () => cart.increaseQuantity(item),
-                              color: Colors.indigo,
-                              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                            ),
-                            Text(
-                              '${item.quantity}',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, size: 18),
-                              onPressed: () => cart.removeItem(item),
-                              color: Colors.red.shade400,
-                              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),

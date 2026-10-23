@@ -132,50 +132,52 @@ class ProductDetailsScreen extends StatelessWidget {
         ],
         ),
         child: SafeArea(
-          child: SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.add_shopping_cart),
-              label: const Text('Add to Cart'),
-              onPressed: () {
-                final user = FirebaseAuth.instance.currentUser;
-                if (user == null) {
-                  showDialog(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Sign up / Login first'),
-                      content: const Text('You need to log in or register to add items to your cart and place orders.'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          child: const Text('Cancel'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () async {
-                            Navigator.pop(ctx);
-                            await LoginScreen.showAsModal(context);
-                          },
-                          child: const Text('Log In / Register'),
-                        ),
-                      ],
-                    ),
-                  );
-                  return;
-                }
+            child: SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton.icon(
+                icon: Icon(product.stock == 0 ? Icons.block : Icons.add_shopping_cart),
+                label: Text(product.stock == 0 ? 'Out of Stock' : 'Add to Cart'),
+                onPressed: product.stock == 0
+                    ? null
+                    : () {
+                        final user = FirebaseAuth.instance.currentUser;
+                        if (user == null) {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Sign up / Login first'),
+                              content: const Text('You need to log in or register to add items to your cart and place orders.'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: const Text('Cancel'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () async {
+                                    Navigator.pop(ctx);
+                                    await LoginScreen.showAsModal(context);
+                                  },
+                                  child: const Text('Log In / Register'),
+                                ),
+                              ],
+                            ),
+                          );
+                          return;
+                        }
 
-                context.read<CartProvider>().addToCart(product);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${product.productName} added to cart'),
-                    behavior: SnackBarBehavior.floating,
-                    duration: const Duration(seconds: 2),
-                    backgroundColor: Colors.indigo.shade700,
-                  ),
-                );
-              },
+                        context.read<CartProvider>().addToCart(product);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${product.productName} added to cart'),
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
+                            backgroundColor: Colors.indigo.shade700,
+                          ),
+                        );
+                      },
+              ),
             ),
-          ),
         ),
       ),
     );
