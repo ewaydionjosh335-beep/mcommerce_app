@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../models/product.dart';
 import '../utils/logger.dart';
+import 'my_orders_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -31,11 +32,30 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   ];
 
   @override
-  void dispose() {
-    _addressController.dispose();
-    _phoneController.dispose();
-    _notesController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists && mounted) {
+        final data = doc.data() ?? {};
+        setState(() {
+          if (_addressController.text.isEmpty) {
+            _addressController.text = (data['address'] as String?) ?? (data['shippingAddress'] as String?) ?? '';
+          }
+          if (_phoneController.text.isEmpty) {
+            _phoneController.text = (data['phone'] as String?) ?? (data['phoneNumber'] as String?) ?? '';
+          }
+        });
+      }
+    } catch (e, s) {
+      logError('Checkout', e, s);
+    }
   }
 
   void _show(String message) {
@@ -178,8 +198,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
       cart.clear();
       if (!mounted) return;
-      _show('Order placed successfully!');
-      Navigator.pop(context); // Return to previous screen (Cart)
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Order placed successfully! Order #$shortId'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.indigo.shade700,
+        ),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => Scaffold(
+            appBar: AppBar(title: const Text('My Orders')),
+            body: const MyOrdersScreen(),
+          ),
+        ),
+      );
     } on FirebaseException catch (e, s) {
       logError('Checkout', e, s);
       _show(e.code == 'unavailable'
