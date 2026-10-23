@@ -37,12 +37,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _password = TextEditingController();
   bool _isLoading = false;
 
+  // HOA05: friendly messages for common authentication errors
+  String _authMessage(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'email-already-in-use':
+        return 'This email is already in use.';
+      case 'invalid-email':
+        return 'Please enter a valid email address.';
+      case 'weak-password':
+        return 'Password should be at least 6 characters.';
+      case 'network-request-failed':
+        return 'No internet connection.';
+      default:
+        return e.message ?? 'Registration failed';
+    }
+  }
+
   Future<void> _register() async {
     if (_name.text.trim().isEmpty ||
         _email.text.trim().isEmpty ||
         _password.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all fields')),
+      );
+      return;
+    }
+
+    if (_password.text.trim().length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password must be at least 6 characters')),
       );
       return;
     }
@@ -64,7 +87,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       logError('Register', e);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.message ?? 'Registration failed')));
+          .showSnackBar(SnackBar(content: Text(_authMessage(e))));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
