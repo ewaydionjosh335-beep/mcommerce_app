@@ -4,6 +4,7 @@ import '../models/product.dart';
 import '../services/product_service.dart';
 import '../utils/logger.dart';
 import '../utils/validation_exception.dart';
+import '../widgets/async_state_view.dart';
 
 InputDecoration _dec(String label, {String? prefix}) => InputDecoration(
       labelText: label,
@@ -245,7 +246,7 @@ class _ProductManagementState extends State<ProductManagement> {
             stream: _products,
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
+                return AsyncStateView(error: snapshot.error);
               }
               if (!snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../utils/logger.dart';
+import '../widgets/async_state_view.dart';
 
 // HOA04 Activity 3: Order Management (display orders + update status)
 class OrdersSection extends StatefulWidget {
@@ -119,7 +120,7 @@ class _OrdersSectionState extends State<OrdersSection> {
       stream: _orders,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return AsyncStateView(error: snapshot.error);
         }
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());

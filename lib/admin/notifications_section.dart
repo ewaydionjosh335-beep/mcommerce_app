@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../utils/logger.dart';
+import '../widgets/async_state_view.dart';
 
 class NotificationsSection extends StatefulWidget {
   const NotificationsSection({super.key});
@@ -152,10 +153,7 @@ class _NotificationsSectionState extends State<NotificationsSection> {
                 .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text('Error loading alerts: ${snapshot.error}'),
-                );
+                return AsyncStateView(error: snapshot.error);
               }
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());

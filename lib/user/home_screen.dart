@@ -7,6 +7,7 @@ import '../providers/cart_provider.dart';
 import '../providers/wishlist_provider.dart';
 import '../services/product_service.dart';
 import '../widgets/product_card.dart';
+import '../widgets/async_state_view.dart';
 import 'cart_screen.dart';
 import 'wishlist_screen.dart';
 import 'my_orders_screen.dart';
@@ -61,10 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
       stream: _productsStream,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(
-            child: Text('Error: ${snapshot.error}',
-                style: const TextStyle(color: Colors.red)),
-          );
+          return AsyncStateView(error: snapshot.error);
         }
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());

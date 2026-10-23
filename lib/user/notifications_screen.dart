@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../utils/logger.dart';
+import '../widgets/async_state_view.dart';
 
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
@@ -54,7 +55,7 @@ class NotificationsScreen extends StatelessWidget {
         stream: notificationsStream,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text('Error loading notifications: ${snapshot.error}'));
+            return AsyncStateView(error: snapshot.error);
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/product.dart';
 import '../services/product_service.dart';
 import '../utils/logger.dart';
+import '../widgets/async_state_view.dart';
 
 class InventorySection extends StatefulWidget {
   const InventorySection({super.key});
@@ -107,7 +108,7 @@ class _InventorySectionState extends State<InventorySection> {
             stream: _service.getProducts(),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
+                return AsyncStateView(error: snapshot.error);
               }
               if (!snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());

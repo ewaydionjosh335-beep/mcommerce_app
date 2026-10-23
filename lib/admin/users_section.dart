@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../widgets/async_state_view.dart';
 
 // HOA04: User Monitoring (list of registered users + customer profile inspector)
 class UsersSection extends StatefulWidget {
@@ -35,7 +36,7 @@ class _UsersSectionState extends State<UsersSection> {
       stream: _users,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return AsyncStateView(error: snapshot.error);
         }
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
