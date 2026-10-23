@@ -61,22 +61,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
   // Sidebar: permanent on wide screens, inside a Drawer on narrow screens
   Widget _buildSidebar({required bool inDrawer}) {
     final primary = Theme.of(context).colorScheme.primary;
+    final onPrimary = Theme.of(context).colorScheme.onPrimary;
     return Material(
       color: primary,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 24, 20, 24),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
               child: Row(
                 children: [
-                  Icon(Icons.admin_panel_settings_outlined, color: Colors.white),
-                  SizedBox(width: 12),
+                  Icon(Icons.admin_panel_settings_outlined, color: onPrimary),
+                  const SizedBox(width: 12),
                   Text(
                     'Admin Panel',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: onPrimary,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -89,10 +90,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 leading: Icon(_icons[i]),
                 title: Text(_titles[i]),
                 selected: _index == i,
-                iconColor: Colors.white70,
-                textColor: Colors.white70,
-                selectedColor: Colors.white,
-                selectedTileColor: Colors.white24,
+                iconColor: onPrimary.withValues(alpha: 0.7),
+                textColor: onPrimary.withValues(alpha: 0.7),
+                selectedColor: onPrimary,
+                selectedTileColor: onPrimary.withValues(alpha: 0.2),
                 onTap: () {
                   setState(() => _index = i);
                   if (inDrawer) Navigator.pop(context);
@@ -100,8 +101,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
              const Spacer(),
             SwitchListTile(
-              title: const Text('Dark Mode', style: TextStyle(color: Colors.white70, fontSize: 14)),
-              secondary: const Icon(Icons.dark_mode_outlined, color: Colors.white70),
+              title: Text('Dark Mode', style: TextStyle(color: onPrimary.withValues(alpha: 0.7), fontSize: 14)),
+              secondary: Icon(Icons.dark_mode_outlined, color: onPrimary.withValues(alpha: 0.7)),
               value: context.watch<ThemeProvider>().isDarkMode,
               onChanged: (val) {
                 context.read<ThemeProvider>().setTheme(val);
@@ -110,8 +111,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ListTile(
               leading: const Icon(Icons.logout_outlined),
               title: const Text('Logout'),
-              iconColor: Colors.white70,
-              textColor: Colors.white70,
+              iconColor: onPrimary.withValues(alpha: 0.7),
+              textColor: onPrimary.withValues(alpha: 0.7),
               onTap: _logout,
             ),
           ],

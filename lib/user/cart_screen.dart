@@ -56,16 +56,16 @@ class _CartScreenState extends State<CartScreen> {
               return Container(
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
+                      color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.03),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
                   ],
-                  border: Border.all(color: Colors.grey.shade100),
+                  border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
@@ -105,9 +105,9 @@ class _CartScreenState extends State<CartScreen> {
                       ),
                         Container(
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade200),
+                            border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -149,10 +149,10 @@ class _CartScreenState extends State<CartScreen> {
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, -4),
               ),
