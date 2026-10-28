@@ -75,11 +75,17 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       // Get the user's role from the users collection
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(cred.user!.uid)
-          .get();
-      final role = doc.data()?['role'] ?? 'user';
+      String role = 'user';
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(cred.user!.uid)
+            .get()
+            .timeout(const Duration(seconds: 10));
+        role = doc.data()?['role'] ?? 'user';
+      } catch (e, s) {
+        logError('Login', e, s);
+      }
       logInfo('Login', 'Signed in ${cred.user!.email} as $role');
 
       if (!mounted) return;

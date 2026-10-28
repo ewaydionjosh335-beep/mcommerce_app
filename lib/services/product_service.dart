@@ -34,14 +34,14 @@ class ProductService {
     required String productName,
     required String description,
     required double price,
-    required int stock,
+    required Map<String, int> sizes,
     required String imageUrl,
   }) {
     Product.validateProduct(
       productName: productName,
       description: description,
       price: price,
-      stock: stock,
+      sizes: sizes,
       imageUrl: imageUrl,
     );
   }
@@ -51,7 +51,7 @@ class ProductService {
     required String productName,
     required String description,
     required double price,
-    required int stock,
+    required Map<String, int> sizes,
     required String imageUrl,
     required String category,
   }) async {
@@ -59,14 +59,16 @@ class ProductService {
       productName: productName,
       description: description,
       price: price,
-      stock: stock,
+      sizes: sizes,
       imageUrl: imageUrl,
     );
+    final totalStock = sizes.values.fold(0, (a, b) => a + b);
     final ref = await _products.add({
       'productName': productName,
       'description': description,
       'price': price,
-      'stock': stock,
+      'sizes': sizes,
+      'stock': totalStock,
       'imageUrl': imageUrl,
       'category': category,
     });
@@ -79,7 +81,7 @@ class ProductService {
     required String productName,
     required String description,
     required double price,
-    required int stock,
+    required Map<String, int> sizes,
     required String imageUrl,
     required String category,
   }) async {
@@ -87,14 +89,16 @@ class ProductService {
       productName: productName,
       description: description,
       price: price,
-      stock: stock,
+      sizes: sizes,
       imageUrl: imageUrl,
     );
+    final totalStock = sizes.values.fold(0, (a, b) => a + b);
     await _products.doc(id).update({
       'productName': productName,
       'description': description,
       'price': price,
-      'stock': stock,
+      'sizes': sizes,
+      'stock': totalStock,
       'imageUrl': imageUrl,
       'category': category,
     });

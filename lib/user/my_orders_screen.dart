@@ -29,6 +29,14 @@ class MyOrdersScreen extends StatelessWidget {
     );
 
     if (confirmed == true) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cancelling order...'),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 1),
+        ),
+      );
       try {
         final orderDoc = await FirebaseFirestore.instance.collection('orders').doc(orderId).get();
         final data = orderDoc.data();

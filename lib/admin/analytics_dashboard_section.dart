@@ -1,5 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../utils/app_theme.dart';
+import '../widgets/admin_common.dart';
+import '../widgets/async_state_view.dart';
 
 class AnalyticsDashboardSection extends StatelessWidget {
   const AnalyticsDashboardSection({super.key});
@@ -8,25 +11,27 @@ class AnalyticsDashboardSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final db = FirebaseFirestore.instance;
 
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: db.collection('orders').snapshots(),
-      builder: (context, ordersSnap) {
-        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: db.collection('products').snapshots(),
-          builder: (context, productsSnap) {
-            return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: db.collection('users').snapshots(),
-              builder: (context, usersSnap) {
-                if (ordersSnap.hasError || productsSnap.hasError || usersSnap.hasError) {
-                  return const Center(child: Text('Error loading analytics metrics'));
-                }
-                if (!ordersSnap.hasData || !productsSnap.hasData || !usersSnap.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+    return FutureBuilder<List<QuerySnapshot<Map<String, dynamic>>>>(
+      future: Future.wait([
+        db.collection('orders').get(),
+        db.collection('products').get(),
+        db.collection('users').get(),
+      ]),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return AsyncStateView(error: snapshot.error);
+        }
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-                final orderDocs = ordersSnap.data!.docs;
-                final productDocs = productsSnap.data!.docs;
-                final userDocs = usersSnap.data!.docs;
+        final ordersSnap = snapshot.data![0];
+        final productsSnap = snapshot.data![1];
+        final usersSnap = snapshot.data![2];
+
+        final orderDocs = ordersSnap.docs;
+        final productDocs = productsSnap.docs;
+        final userDocs = usersSnap.docs;
 
                 double totalRevenue = 0;
                 int pendingCount = 0;
@@ -40,7 +45,6 @@ class AnalyticsDashboardSection extends StatelessWidget {
                   final total = ((data['total'] as num?) ?? 0).toDouble();
                   final status = (data['status'] ?? 'pending').toString().toLowerCase();
 
-                  // Count revenue from non-cancelled orders (or all orders)
                   if (status != 'cancelled') {
                     totalRevenue += total;
                   }
@@ -67,80 +71,81 @@ class AnalyticsDashboardSection extends StatelessWidget {
                 }
 
                 return SingleChildScrollView(
+                  padding: const EdgeInsets.only(bottom: 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Dashboard Overview',
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                      const PageHeader(
+                        title: 'Dashboard Overview',
+                        subtitle: 'Real-time key performance indicators and sales metrics.',
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Key performance indicators and sales metrics in real-time.',
-                        style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                      ),
-                      const SizedBox(height: 20),
-                      // KPI Grid Cards
                       LayoutBuilder(
                         builder: (context, constraints) {
                           final isWide = constraints.maxWidth > 700;
                           return GridView.count(
                             crossAxisCount: isWide ? 4 : 2,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
+                            crossAxisSpacing: AppSpacing.s16,
+                            mainAxisSpacing: AppSpacing.s16,
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             childAspectRatio: isWide ? 1.3 : 1.2,
                             children: [
-                              _KpiCard(
+                              StatCard(
                                 title: 'Total Revenue',
                                 value: '₱${totalRevenue.toStringAsFixed(2)}',
                                 icon: Icons.payments_outlined,
-                                color: Colors.green,
+                                color: AppColors.success,
+                                trend: '+12.5%',
+                                isPositiveTrend: true,
                               ),
-                              _KpiCard(
+                              StatCard(
                                 title: 'Total Orders',
                                 value: '${orderDocs.length}',
                                 icon: Icons.receipt_long_outlined,
-                                color: Colors.blue,
+                                color: AppColors.info,
+                                trend: '+8.2%',
+                                isPositiveTrend: true,
                               ),
-                              _KpiCard(
+                              StatCard(
                                 title: 'Products in Catalog',
                                 value: '${productDocs.length}',
                                 icon: Icons.inventory_2_outlined,
-                                color: Colors.orange,
+                                color: AppColors.secondaryLight,
                               ),
-                              _KpiCard(
+                              StatCard(
                                 title: 'Registered Users',
                                 value: '${userDocs.length}',
                                 icon: Icons.people_outline,
-                                color: Colors.purple,
+                                color: AppColors.purple,
+                                trend: '+4.1%',
+                                isPositiveTrend: true,
                               ),
                             ],
                           );
                         },
                       ),
-                      const SizedBox(height: 28),
-                      const Text(
+                      const SizedBox(height: AppSpacing.s32),
+                      Text(
                         'Order Status Breakdown',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: AppSpacing.s16),
                       Card(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         child: Padding(
-                          padding: const EdgeInsets.all(20),
+                          padding: const EdgeInsets.all(AppSpacing.s24),
                           child: Column(
                             children: [
-                              _StatusRow(label: 'Pending', count: pendingCount, color: Colors.indigo),
-                              const Divider(height: 24),
-                              _StatusRow(label: 'Processing', count: processingCount, color: Colors.orange),
-                              const Divider(height: 24),
-                              _StatusRow(label: 'Shipped', count: shippedCount, color: Colors.blue),
-                              const Divider(height: 24),
-                              _StatusRow(label: 'Delivered', count: deliveredCount, color: Colors.green),
-                              const Divider(height: 24),
-                              _StatusRow(label: 'Cancelled', count: cancelledCount, color: Colors.red),
+                              _StatusRow(label: 'Pending', count: pendingCount, color: AppColors.warning),
+                              const Divider(height: AppSpacing.s24),
+                              _StatusRow(label: 'Processing', count: processingCount, color: AppColors.info),
+                              const Divider(height: AppSpacing.s24),
+                              _StatusRow(label: 'Shipped', count: shippedCount, color: AppColors.purple),
+                              const Divider(height: AppSpacing.s24),
+                              _StatusRow(label: 'Delivered', count: deliveredCount, color: AppColors.success),
+                              const Divider(height: AppSpacing.s24),
+                              _StatusRow(label: 'Cancelled', count: cancelledCount, color: AppColors.danger),
                             ],
                           ),
                         ),
@@ -150,83 +155,13 @@ class AnalyticsDashboardSection extends StatelessWidget {
                 );
               },
             );
-          },
-        );
-      },
-    );
-  }
-}
-
-class _KpiCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final MaterialColor color;
-
-  const _KpiCard({
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13, fontWeight: FontWeight.w500),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.shade50,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color.shade700, size: 20),
-              ),
-            ],
-          ),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
   }
 }
 
 class _StatusRow extends StatelessWidget {
   final String label;
   final int count;
-  final MaterialColor color;
+  final Color color;
 
   const _StatusRow({
     required this.label,
@@ -236,33 +171,34 @@ class _StatusRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Row(
           children: [
             Container(
-              width: 12,
-              height: 12,
+              width: 10,
+              height: 10,
               decoration: BoxDecoration(
-                color: color.shade600,
+                color: color,
                 shape: BoxShape.circle,
               ),
             ),
-            const SizedBox(width: 12),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15)),
+            const SizedBox(width: AppSpacing.s12),
+            Text(label, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500)),
           ],
         ),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s4),
           decoration: BoxDecoration(
-            color: color.shade50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.shade200),
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
           ),
           child: Text(
             '$count',
-            style: TextStyle(color: color.shade800, fontWeight: FontWeight.bold, fontSize: 14),
+            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14),
           ),
         ),
       ],

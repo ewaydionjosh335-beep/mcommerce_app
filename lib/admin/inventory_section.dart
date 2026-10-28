@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/product.dart';
 import '../services/product_service.dart';
+import '../utils/app_theme.dart';
 import '../utils/logger.dart';
+import '../widgets/admin_common.dart';
 import '../widgets/async_state_view.dart';
 
 class InventorySection extends StatefulWidget {
@@ -17,20 +19,27 @@ class _InventorySectionState extends State<InventorySection> {
 
   Future<void> _quickRestock(Product product, int addQty) async {
     try {
-      final newStock = product.stock + addQty;
+      final updatedSizes = Map<String, int>.from(product.sizes);
+      if (updatedSizes.isNotEmpty) {
+        final firstKey = updatedSizes.keys.first;
+        updatedSizes[firstKey] = (updatedSizes[firstKey] ?? 0) + addQty;
+      } else {
+        updatedSizes['Standard'] = addQty;
+      }
       await _service.updateProduct(
         product.id,
         productName: product.productName,
         description: product.description,
         price: product.price,
-        stock: newStock,
+        sizes: updatedSizes,
         imageUrl: product.imageUrl,
         category: product.category,
       );
       if (!mounted) return;
+      final newTotal = product.stock + addQty;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Restocked ${product.productName} by +$addQty (New stock: $newStock)'),
+          content: Text('Restocked ${product.productName} by +$addQty (New stock: $newTotal)'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -52,17 +61,10 @@ class _InventorySectionState extends State<InventorySection> {
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Add Stock Quantity',
-            hintText: 'e.g., 20',
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(labelText: 'Add Stock Quantity', border: OutlineInputBorder()),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
               final qty = int.tryParse(controller.text.trim()) ?? 0;
@@ -81,159 +83,146 @@ class _InventorySectionState extends State<InventorySection> {
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Inventory Management & Low-Stock Alerts',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+        PageHeader(
+          title: 'Inventory Management',
+          subtitle: 'Monitor stock levels and perform quick restocks.',
+          actions: [
             FilterChip(
-              label: Text(_lowStockOnly ? 'Showing Low Stock (<5)' : 'Showing All Products'),
+              label: Text(_lowStockOnly ? 'Low Stock Only' : 'All Products'),
               selected: _lowStockOnly,
-              selectedColor: Colors.orange.shade100,
               onSelected: (val) => setState(() => _lowStockOnly = val),
-              avatar: Icon(
-                Icons.warning_amber_rounded,
-                color: _lowStockOnly ? Colors.orange.shade800 : Colors.grey,
-              ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
         Expanded(
           child: StreamBuilder<List<Product>>(
             stream: _service.getProducts(),
             builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return AsyncStateView(error: snapshot.error);
-              }
-              if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
+              if (snapshot.hasError) return AsyncStateView(error: snapshot.error);
+              if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
               final products = snapshot.data!;
-              final filtered = _lowStockOnly
-                  ? products.where((p) => p.stock < 5).toList()
-                  : products;
+              final filtered = _lowStockOnly ? products.where((p) => p.stock < 5).toList() : products;
 
               if (filtered.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey.shade400),
-                      const SizedBox(height: 12),
-                      Text(
-                        _lowStockOnly ? 'No low stock products found (All stocks >= 5)' : 'No products in inventory.',
-                        style: TextStyle(color: Colors.grey.shade600, fontSize: 16, fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
-                );
+                return const Center(child: Text('No inventory items match the criteria.'));
               }
 
-              return Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: LayoutBuilder(
-                  builder: (context, constraints) => SingleChildScrollView(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                        child: DataTable(
-                          columns: const [
-                            DataColumn(label: Text('Product Name')),
-                            DataColumn(label: Text('Category')),
-                            DataColumn(label: Text('Current Stock')),
-                            DataColumn(label: Text('Price')),
-                            DataColumn(label: Text('Quick Restock Actions')),
-                          ],
-                          rows: filtered.map((p) {
-                            final isLow = p.stock < 5;
-                            return DataRow(
-                              key: ValueKey(p.id),
-                              cells: [
-                                DataCell(
-                                  Row(
-                                    children: [
-                                      if (isLow)
-                                        const Padding(
-                                          padding: EdgeInsets.only(right: 8),
-                                          child: Icon(Icons.warning, color: Colors.orange, size: 18),
-                                        ),
-                                      Text(
-                                        p.productName,
-                                        style: TextStyle(
-                                          fontWeight: isLow ? FontWeight.bold : FontWeight.normal,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                DataCell(Text(p.category)),
-                                DataCell(
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: isLow ? Colors.red.shade50 : Colors.green.shade50,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: isLow ? Colors.red.shade200 : Colors.green.shade200,
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final isMobile = constraints.maxWidth < 600;
+                  if (isMobile) {
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(8),
+                      itemCount: filtered.length,
+                      itemBuilder: (context, index) {
+                        final p = filtered[index];
+                        final isLow = p.stock < 5;
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Row(
+                                        children: [
+                                          if (isLow) const Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 18),
+                                          if (isLow) const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              p.productName,
+                                              style: TextStyle(fontWeight: isLow ? FontWeight.bold : FontWeight.w600, fontSize: 16),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                    child: Text(
-                                      '${p.stock} units',
-                                      style: TextStyle(
-                                        color: isLow ? Colors.red.shade800 : Colors.green.shade800,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
+                                    StatusChip(status: '${p.stock} units'),
+                                  ],
                                 ),
-                                DataCell(Text('₱${p.price.toStringAsFixed(2)}')),
-                                DataCell(
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      OutlinedButton.icon(
-                                        icon: const Icon(Icons.add, size: 14),
-                                        label: const Text('+10'),
-                                        onPressed: () => _quickRestock(p, 10),
-                                        style: OutlinedButton.styleFrom(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                                          minimumSize: const Size(60, 32),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      OutlinedButton.icon(
-                                        icon: const Icon(Icons.add, size: 14),
-                                        label: const Text('+50'),
-                                        onPressed: () => _quickRestock(p, 50),
-                                        style: OutlinedButton.styleFrom(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                                          minimumSize: const Size(60, 32),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      IconButton(
-                                        icon: const Icon(Icons.edit_note, color: Colors.indigo),
-                                        tooltip: 'Custom Restock',
-                                        onPressed: () => _showCustomRestockDialog(p),
-                                      ),
-                                    ],
-                                  ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('Category: ${p.category}', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                                    Text('Price: ₱${p.price.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.indigo.shade800)),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    ElevatedButton(onPressed: () => _quickRestock(p, 10), child: const Text('+10')),
+                                    const SizedBox(width: 8),
+                                    ElevatedButton(onPressed: () => _quickRestock(p, 50), child: const Text('+50')),
+                                    const SizedBox(width: 8),
+                                    IconButton(icon: const Icon(Icons.edit_note), onPressed: () => _showCustomRestockDialog(p)),
+                                  ],
                                 ),
                               ],
-                            );
-                          }).toList(),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  }
+
+                  return Card(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SingleChildScrollView(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                          child: DataTable(
+                            headingTextStyle: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                            columns: const [
+                              DataColumn(label: Text('Product')),
+                              DataColumn(label: Text('Category')),
+                              DataColumn(label: Text('Stock')),
+                              DataColumn(label: Text('Price')),
+                              DataColumn(label: Text('Restock')),
+                            ],
+                            rows: filtered.map((p) {
+                              final isLow = p.stock < 5;
+                              return DataRow(
+                                key: ValueKey(p.id),
+                                cells: [
+                                  DataCell(Row(
+                                    children: [
+                                      if (isLow) const Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 18),
+                                      if (isLow) const SizedBox(width: AppSpacing.s8),
+                                      Text(p.productName, style: TextStyle(fontWeight: isLow ? FontWeight.bold : FontWeight.w500)),
+                                    ],
+                                  )),
+                                  DataCell(Text(p.category)),
+                                  DataCell(StatusChip(status: '${p.stock} units')),
+                                  DataCell(Text('₱${p.price.toStringAsFixed(2)}')),
+                                  DataCell(Row(
+                                    children: [
+                                      ElevatedButton(onPressed: () => _quickRestock(p, 10), child: const Text('+10')),
+                                      const SizedBox(width: AppSpacing.s8),
+                                      ElevatedButton(onPressed: () => _quickRestock(p, 50), child: const Text('+50')),
+                                      const SizedBox(width: AppSpacing.s8),
+                                      IconButton(icon: const Icon(Icons.edit_note), onPressed: () => _showCustomRestockDialog(p)),
+                                    ],
+                                  )),
+                                ],
+                              );
+                            }).toList(),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                },
               );
             },
           ),

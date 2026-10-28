@@ -1,8 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../utils/app_theme.dart';
 import '../utils/logger.dart';
-import '../utils/status_helpers.dart';
 import '../widgets/async_state_view.dart';
+import '../widgets/admin_common.dart';
 
 // HOA04 Activity 3: Order Management (display orders + update status)
 class OrdersSection extends StatefulWidget {
@@ -29,6 +30,31 @@ class _OrdersSectionState extends State<OrdersSection> {
   String _label(String s) => s[0].toUpperCase() + s.substring(1);
 
   // Step 7: Update Order Status
+  Future<void> _updateStatusWithConfirmation(String orderId, String currentStatus, String newStatus) async {
+    if (newStatus == 'cancelled' || newStatus == 'delivered') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text('Update Order Status to ${_label(newStatus)}?'),
+          content: Text('Are you sure you want to mark order #${orderId.substring(0, orderId.length > 8 ? 8 : orderId.length)} as $newStatus?${newStatus == 'cancelled' ? ' This will restore product stock.' : ''}'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: newStatus == 'cancelled' ? ElevatedButton.styleFrom(backgroundColor: AppColors.danger, foregroundColor: Colors.white) : null,
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(newStatus == 'cancelled' ? 'Confirm Cancel' : 'Confirm'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+    await _updateStatus(orderId, newStatus);
+  }
+
   Future<void> _updateStatus(String orderId, String status) async {
     try {
       final orderDoc = await FirebaseFirestore.instance
@@ -116,124 +142,161 @@ class _OrdersSectionState extends State<OrdersSection> {
           return const Center(child: Text('No orders yet.'));
         }
 
-        // Step 6: Orders table
-        return Card(
-          child: LayoutBuilder(
-            builder: (context, constraints) => SingleChildScrollView(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                  child: DataTable(
-                    columns: const [
-                      DataColumn(label: Text('Customer Name')),
-                      DataColumn(label: Text('Products Ordered')),
-                      DataColumn(label: Text('Total Amount')),
-                      DataColumn(label: Text('Status')),
-                    ],
-                    rows: docs.map((doc) {
-                      final data = doc.data();
-                      final total = ((data['total'] as num?) ?? 0).toDouble();
-                      final raw =
-                          (data['status'] ?? 'pending').toString().toLowerCase();
-                      final status = _statuses.contains(raw) ? raw : 'pending';
+        // Step 6: Orders table / responsive view
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isMobile = constraints.maxWidth < 600;
+            if (isMobile) {
+              return ListView.builder(
+                padding: const EdgeInsets.all(8),
+                itemCount: docs.length,
+                itemBuilder: (context, index) {
+                  final doc = docs[index];
+                  final data = doc.data();
+                  final total = ((data['total'] as num?) ?? 0).toDouble();
+                  final raw = (data['status'] ?? 'pending').toString().toLowerCase();
+                  final status = _statuses.contains(raw) ? raw : 'pending';
 
-                      return DataRow(
-                        key: ValueKey(doc.id),
-                        cells: [
-                          DataCell(_CustomerName(key: ValueKey(doc.id), order: data)),
-                          DataCell(
-                            ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 280),
-                              child: Text(
-                                _itemsText(data['items']),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 2,
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    const Text('Customer: ', style: TextStyle(fontWeight: FontWeight.w500, color: Colors.grey)),
+                                    Expanded(child: _CustomerName(key: ValueKey(doc.id), order: data)),
+                                  ],
+                                ),
+                              ),
+                              PopupMenuButton<String>(
+                                initialValue: status,
+                                onSelected: (v) {
+                                  if (v != status) {
+                                    _updateStatusWithConfirmation(doc.id, status, v);
+                                  }
+                                },
+                                itemBuilder: (context) => _statuses
+                                    .map((s) => PopupMenuItem(
+                                          value: s,
+                                          child: Text(_label(s)),
+                                        ))
+                                    .toList(),
+                                child: StatusChip(status: status),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Items: ${_itemsText(data['items'])}',
+                            style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Total: ₱${total.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo.shade800, fontSize: 15)),
+                              Text('ID: #${doc.id.substring(0, doc.id.length > 8 ? 8 : doc.id.length)}', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            }
+
+            return Card(
+              child: SingleChildScrollView(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                    child: DataTable(
+                      columns: const [
+                        DataColumn(label: Text('Customer Name')),
+                        DataColumn(label: Text('Products Ordered')),
+                        DataColumn(label: Text('Total Amount')),
+                        DataColumn(label: Text('Status')),
+                      ],
+                      rows: docs.map((doc) {
+                        final data = doc.data();
+                        final total = ((data['total'] as num?) ?? 0).toDouble();
+                        final raw =
+                            (data['status'] ?? 'pending').toString().toLowerCase();
+                        final status = _statuses.contains(raw) ? raw : 'pending';
+
+                        return DataRow(
+                          key: ValueKey(doc.id),
+                          cells: [
+                            DataCell(_CustomerName(key: ValueKey(doc.id), order: data)),
+                            DataCell(
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 280),
+                                child: Text(
+                                  _itemsText(data['items']),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 2,
+                                ),
                               ),
                             ),
-                          ),
-                          DataCell(Text('₱${total.toStringAsFixed(2)}')),
-                           DataCell(
-                             Container(
-                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                               decoration: BoxDecoration(
-                                  color: StatusHelpers.statusColor(context, status).withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: StatusHelpers.statusColor(context, status).withValues(alpha: 0.4),
-                                  ),
-                                ),
-                               child: DropdownButton<String>(
-                                 value: status,
-                                 underline: const SizedBox.shrink(),
-                                 dropdownColor: Colors.white,
-                                 style: TextStyle(
-                                    color: StatusHelpers.statusColor(context, status),
-                                   fontWeight: FontWeight.bold,
-                                   fontSize: 13,
-                                 ),
-                                 items: _statuses
-                                     .map((s) => DropdownMenuItem(
+                            DataCell(Text('₱${total.toStringAsFixed(2)}')),
+                             DataCell(
+                               PopupMenuButton<String>(
+                                 initialValue: status,
+                                  onSelected: (v) {
+                                    if (v != status) {
+                                      _updateStatusWithConfirmation(doc.id, status, v);
+                                    }
+                                  },
+                                 itemBuilder: (context) => _statuses
+                                     .map((s) => PopupMenuItem(
                                            value: s,
                                            child: Text(_label(s)),
                                          ))
                                      .toList(),
-                                 onChanged: (v) {
-                                   if (v != null && v != status) {
-                                     _updateStatus(doc.id, v);
-                                   }
-                                 },
+                                 child: StatusChip(status: status),
                                ),
                              ),
-                           ),
-                        ],
-                      );
-                    }).toList(),
+                          ],
+                        );
+                      }).toList(),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
   }
 }
 
-// Shows the customer's name. New orders store it directly (customerName);
-// older orders only have userId, so the name is looked up from users.
-class _CustomerName extends StatefulWidget {
+// Shows the customer's name from order document (denormalized customerName or userId).
+class _CustomerName extends StatelessWidget {
   final Map<String, dynamic> order;
   const _CustomerName({super.key, required this.order});
 
   @override
-  State<_CustomerName> createState() => _CustomerNameState();
-}
-
-class _CustomerNameState extends State<_CustomerName> {
-  late final Future<String> _name = _resolve();
-
-  Future<String> _resolve() async {
-    final saved = widget.order['customerName'];
-    if (saved is String && saved.isNotEmpty) return saved;
-
-    final uid = widget.order['userId'];
-    if (uid is! String) return 'Unknown';
-    try {
-      final doc =
-          await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      return (doc.data()?['name'] as String?) ?? 'Unknown';
-    } catch (e, s) {
-      logError('OrdersCustomerName', e, s);
-      return 'Unknown';
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return FutureBuilder<String>(
-      future: _name,
-      builder: (context, snapshot) => Text(snapshot.data ?? '...'),
-    );
+    final saved = order['customerName'];
+    if (saved is String && saved.isNotEmpty) {
+      return Text(saved);
+    }
+    final uid = order['userId'];
+    if (uid is String && uid.isNotEmpty) {
+      return Text(uid);
+    }
+    return const Text('Unknown');
   }
 }

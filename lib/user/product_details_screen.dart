@@ -4,15 +4,104 @@ import 'package:provider/provider.dart';
 import '../models/product.dart';
 import '../providers/cart_provider.dart';
 import '../screens/login_screen.dart';
+import 'checkout_screen.dart';
 import 'product_reviews_section.dart';
 
-class ProductDetailsScreen extends StatelessWidget {
+class ProductDetailsScreen extends StatefulWidget {
   final Product product;
 
   const ProductDetailsScreen({super.key, required this.product});
 
   @override
+  State<ProductDetailsScreen> createState() => _ProductDetailsScreenState();
+}
+
+class SizeSelector extends StatefulWidget {
+  final Product product;
+  final ValueChanged<String?> onSelected;
+
+  const SizeSelector({super.key, required this.product, required this.onSelected});
+
+  @override
+  State<SizeSelector> createState() => _SizeSelectorState();
+}
+
+class _SizeSelectorState extends State<SizeSelector> {
+  String? _selectedSize;
+
+  @override
   Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: widget.product.sizes.entries.map((entry) {
+        final sizeName = entry.key;
+        final sizeStock = entry.value;
+        final isSelected = _selectedSize == sizeName;
+        final isOutOfStock = sizeStock <= 0;
+
+        return ChoiceChip(
+          label: Text('$sizeName ($sizeStock left)'),
+          selected: isSelected,
+          selectedColor: Colors.indigo.shade100,
+          backgroundColor: Colors.grey.shade100,
+          labelStyle: TextStyle(
+            color: isOutOfStock 
+                ? Colors.grey 
+                : (isSelected ? Colors.indigo.shade900 : Colors.black87),
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+          onSelected: isOutOfStock 
+              ? (_) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Size $sizeName is out of stock'),
+                      behavior: SnackBarBehavior.floating,
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                }
+              : (selected) {
+                  setState(() {
+                    _selectedSize = selected ? sizeName : null;
+                  });
+                  widget.onSelected(_selectedSize);
+                },
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
+  String? _selectedSize;
+
+  void _showLoginDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sign up / Login first'),
+        content: const Text('You need to log in or register to add items to your cart and place orders.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await LoginScreen.showAsModal(context);
+            },
+            child: const Text('Log In / Register'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final product = widget.product;
     return Scaffold(
       appBar: AppBar(
         title: Text(product.productName),
@@ -21,44 +110,22 @@ class ProductDetailsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Stack(
-              children: [
-                Hero(
-                  tag: product.id,
-                  child: SizedBox(
-                    height: 360,
-                    width: double.infinity,
-                    child: Image.network(
-                      product.imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        color: Colors.grey.shade100,
-                        child: const Center(
-                          child: Icon(Icons.image_not_supported, size: 60, color: Colors.grey),
-                        ),
-                      ),
+            Hero(
+              tag: product.id,
+              child: SizedBox(
+                height: 360,
+                width: double.infinity,
+                child: Image.network(
+                  product.imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: Colors.grey.shade100,
+                    child: const Center(
+                      child: Icon(Icons.image_not_supported, size: 60, color: Colors.grey),
                     ),
                   ),
                 ),
-                Positioned(
-                  top: 16,
-                  right: 16,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: product.stock > 0 ? Colors.green.shade600 : Colors.red.shade600,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: const [
-                        BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-                      ],
-                    ),
-                    child: Text(
-                      product.stock > 0 ? 'In Stock (${product.stock})' : 'Out of Stock',
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
             Container(
               transform: Matrix4.translationValues(0.0, -20.0, 0.0),
@@ -93,6 +160,21 @@ class ProductDetailsScreen extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Select Size',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizeSelector(
+                    product: product,
+                    onSelected: (size) {
+                      _selectedSize = size;
+                    },
                   ),
                   const SizedBox(height: 24),
                   const Text(
@@ -132,52 +214,87 @@ class ProductDetailsScreen extends StatelessWidget {
         ],
         ),
         child: SafeArea(
-            child: SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton.icon(
-                icon: Icon(product.stock == 0 ? Icons.block : Icons.add_shopping_cart),
-                label: Text(product.stock == 0 ? 'Out of Stock' : 'Add to Cart'),
-                onPressed: product.stock == 0
-                    ? null
-                    : () {
-                        final user = FirebaseAuth.instance.currentUser;
-                        if (user == null) {
-                          showDialog(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: const Text('Sign up / Login first'),
-                              content: const Text('You need to log in or register to add items to your cart and place orders.'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx),
-                                  child: const Text('Cancel'),
-                                ),
-                                ElevatedButton(
-                                  onPressed: () async {
-                                    Navigator.pop(ctx);
-                                    await LoginScreen.showAsModal(context);
-                                  },
-                                  child: const Text('Log In / Register'),
-                                ),
-                              ],
-                            ),
-                          );
-                          return;
-                        }
+            child: product.stock == 0
+                ? SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.block),
+                      label: const Text('Out of Stock'),
+                      onPressed: null,
+                    ),
+                  )
+                : Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 52,
+                          child: ElevatedButton.icon(
+                            icon: const Icon(Icons.add_shopping_cart),
+                            label: const Text('Add to Cart'),
+                            onPressed: () {
+                              final user = FirebaseAuth.instance.currentUser;
+                              if (user == null) {
+                                _showLoginDialog(context);
+                                return;
+                              }
+                              if (_selectedSize == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Please select a size first')),
+                                );
+                                return;
+                              }
 
-                        context.read<CartProvider>().addToCart(product);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('${product.productName} added to cart'),
-                            behavior: SnackBarBehavior.floating,
-                            duration: const Duration(seconds: 2),
-                            backgroundColor: Colors.indigo.shade700,
+                              context.read<CartProvider>().addToCart(product, _selectedSize!);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('${product.productName} ($_selectedSize) added to cart'),
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(seconds: 2),
+                                  backgroundColor: Colors.indigo.shade700,
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
-              ),
-            ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: SizedBox(
+                          height: 52,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.indigo.shade700,
+                              foregroundColor: Colors.white,
+                            ),
+                            onPressed: () {
+                              final user = FirebaseAuth.instance.currentUser;
+                              if (user == null) {
+                                _showLoginDialog(context);
+                                return;
+                              }
+                              if (_selectedSize == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Please select a size first')),
+                                );
+                                return;
+                              }
+
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => CheckoutScreen(
+                                    directItems: [CartItem(product: product, selectedSize: _selectedSize!)],
+                                  ),
+                                ),
+                              );
+                            },
+                            child: const Text('Buy Now'),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
         ),
       ),
     );

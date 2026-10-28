@@ -31,7 +31,7 @@ void main() {
       expect(product.price, 0.0);
       expect(product.description, '');
       expect(product.imageUrl, '');
-      expect(product.stock, 0);
+      expect(product.stock, 10);
       expect(product.category, 'General');
     });
 
@@ -60,7 +60,7 @@ void main() {
         price: 10.0,
         description: 'Desc',
         imageUrl: 'http://',
-        stock: 5,
+        sizes: {'Standard': 5},
         category: 'Cat',
       );
       final p2 = Product(
@@ -69,7 +69,7 @@ void main() {
         price: 25.0,
         description: 'Desc',
         imageUrl: 'http://',
-        stock: 5,
+        sizes: {'Standard': 5},
         category: 'Cat',
       );
 
@@ -131,7 +131,7 @@ void main() {
           productName: 'Valid Product',
           description: 'Good description',
           price: 10.0,
-          stock: 5,
+          sizes: {'Standard': 5},
           imageUrl: 'https://example.com/img.png',
         );
       }, returnsNormally);
@@ -143,7 +143,7 @@ void main() {
           productName: '',
           description: 'Desc',
           price: 10.0,
-          stock: 5,
+          sizes: {'Standard': 5},
           imageUrl: 'https://example.com/img.png',
         );
       }, throwsA(isA<ValidationException>()));
@@ -155,7 +155,7 @@ void main() {
           productName: 'Product',
           description: 'Desc',
           price: 0.0,
-          stock: 5,
+          sizes: {'Standard': 5},
           imageUrl: 'https://example.com/img.png',
         );
       }, throwsA(isA<ValidationException>()));
@@ -165,7 +165,7 @@ void main() {
           productName: 'Product',
           description: 'Desc',
           price: -5.0,
-          stock: 5,
+          sizes: {'Standard': 5},
           imageUrl: 'https://example.com/img.png',
         );
       }, throwsA(isA<ValidationException>()));
@@ -177,7 +177,7 @@ void main() {
           productName: 'Product',
           description: 'Desc',
           price: 10.0,
-          stock: -1,
+          sizes: {'Standard': -1},
           imageUrl: 'https://example.com/img.png',
         );
       }, throwsA(isA<ValidationException>()));
@@ -189,7 +189,7 @@ void main() {
           productName: 'Product',
           description: 'Desc',
           price: 10.0,
-          stock: 5,
+          sizes: {'Standard': 5},
           imageUrl: 'ftp://example.com/img.png',
         );
       }, throwsA(isA<ValidationException>()));

@@ -15,11 +15,16 @@ class ProductReviewsSection extends StatefulWidget {
 class _ProductReviewsSectionState extends State<ProductReviewsSection> {
   bool _hasPurchased = false;
   bool _checkingPurchase = true;
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _reviewsStream;
 
   @override
   void initState() {
     super.initState();
     _checkIfPurchased();
+    _reviewsStream = FirebaseFirestore.instance
+        .collection('reviews')
+        .where('productId', isEqualTo: widget.product.id)
+        .snapshots();
   }
 
   Future<void> _checkIfPurchased() async {
@@ -183,13 +188,8 @@ class _ProductReviewsSectionState extends State<ProductReviewsSection> {
 
   @override
   Widget build(BuildContext context) {
-    final reviewsStream = FirebaseFirestore.instance
-        .collection('reviews')
-        .where('productId', isEqualTo: widget.product.id)
-        .snapshots();
-
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: reviewsStream,
+      stream: _reviewsStream,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Padding(

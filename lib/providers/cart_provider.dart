@@ -7,9 +7,10 @@ import '../models/product.dart';
 
 class CartItem {
   final Product product;
+  final String selectedSize;
   int quantity;
 
-  CartItem({required this.product, this.quantity = 1});
+  CartItem({required this.product, required this.selectedSize, this.quantity = 1});
 }
 
 // State Management for the cart.
@@ -38,23 +39,29 @@ class CartProvider extends ChangeNotifier {
         (sum, item) => sum + item.product.price * item.quantity,
       );
 
-  // Step 6: Add to Cart logic
-  void addToCart(Product product) {
-    if (product.stock <= 0) return;
-    final index = _items.indexWhere((item) => item.product.id == product.id);
+  // Step 6: Add to Cart logic with size
+  void addToCart(Product product, [String? selectedSize]) {
+    final sizeToUse = selectedSize ?? (product.sizes.isNotEmpty ? product.sizes.keys.first : 'Standard');
+    final sizeStock = product.sizes[sizeToUse] ?? 0;
+    if (sizeStock <= 0) return;
+
+    final index = _items.indexWhere(
+      (item) => item.product.id == product.id && item.selectedSize == sizeToUse,
+    );
     if (index >= 0) {
-      if (_items[index].quantity < product.stock) {
+      if (_items[index].quantity < sizeStock) {
         _items[index].quantity++;
       }
     } else {
-      _items.add(CartItem(product: product, quantity: 1));
+      _items.add(CartItem(product: product, selectedSize: sizeToUse, quantity: 1));
     }
     notifyListeners();
   }
 
   // Increase Quantity
   void increaseQuantity(CartItem item) {
-    if (item.quantity < item.product.stock) {
+    final sizeStock = item.product.sizes[item.selectedSize] ?? item.product.stock;
+    if (item.quantity < sizeStock) {
       item.quantity++;
       notifyListeners();
     }
@@ -79,9 +86,15 @@ class CartProvider extends ChangeNotifier {
   // HOA05: replace a cart item's product with fresh data from Firestore
   // (e.g. the admin changed the price after the item was added)
   void syncProduct(Product fresh) {
-    final i = _items.indexWhere((e) => e.product.id == fresh.id);
-    if (i < 0) return;
-    _items[i] = CartItem(product: fresh, quantity: _items[i].quantity);
+    for (int i = 0; i < _items.length; i++) {
+      if (_items[i].product.id == fresh.id) {
+        _items[i] = CartItem(
+          product: fresh,
+          selectedSize: _items[i].selectedSize,
+          quantity: _items[i].quantity,
+        );
+      }
+    }
     notifyListeners();
   }
 

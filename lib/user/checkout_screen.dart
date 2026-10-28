@@ -8,7 +8,8 @@ import '../utils/logger.dart';
 import 'my_orders_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
-  const CheckoutScreen({super.key});
+  final List<CartItem>? directItems;
+  const CheckoutScreen({super.key, this.directItems});
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
@@ -73,11 +74,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Future<String?> _validateCart(CartProvider cart) async {
-    if (cart.items.isEmpty) return 'Your cart is empty';
+  Future<String?> _validateCart(List<CartItem> items, {CartProvider? cart}) async {
+    if (items.isEmpty) return 'Your cart is empty';
 
     final db = FirebaseFirestore.instance;
-    final items = List<CartItem>.from(cart.items);
     final snaps = await Future.wait(
       items.map((i) => db.collection('products').doc(i.product.id).get()),
     );
@@ -88,26 +88,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final snap = snaps[i];
 
       if (!snap.exists) {
-        cart.removeById(item.product.id);
+        if (cart != null) cart.removeById(item.product.id);
         problems.add('${item.product.productName} is no longer available and was removed.');
         continue;
       }
 
       final fresh = Product.fromFirestore(snap);
+      final sizeStock = fresh.sizes[item.selectedSize] ?? 0;
 
-      if (fresh.stock < item.quantity) {
-        problems.add('${fresh.productName}: only ${fresh.stock} left in stock.');
+      if (sizeStock < item.quantity) {
+        problems.add('${fresh.productName} (Size: ${item.selectedSize}): only $sizeStock left in stock.');
       }
 
       if (fresh.price != item.product.price) {
-        cart.syncProduct(fresh);
+        if (cart != null) cart.syncProduct(fresh);
         problems.add('${fresh.productName} price changed to ₱${fresh.price.toStringAsFixed(2)}. Please review your total.');
       }
     }
     return problems.isEmpty ? null : problems.join('\n');
   }
 
-  Future<void> _submitOrder(CartProvider cart) async {
+  Future<void> _submitOrder(CartProvider? cart) async {
     if (_submitting) return;
     if (!_formKey.currentState!.validate()) return;
 
@@ -116,7 +117,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _show('Please log in again.');
       return;
     }
-    if (cart.items.isEmpty) {
+    
+    final isDirectPurchase = widget.directItems != null;
+    final itemsToPurchase = widget.directItems ?? cart?.items;
+
+    if (itemsToPurchase == null || itemsToPurchase.isEmpty) {
       _show('Your cart is empty');
       return;
     }
@@ -124,7 +129,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _submitting = true;
     setState(() => _isLoading = true);
     try {
-      final problem = await _validateCart(cart);
+      final problem = await _validateCart(itemsToPurchase, cart: cart);
       if (problem != null) {
         logInfo('Checkout', 'Validation failed: $problem');
         _show(problem);
@@ -138,16 +143,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final customerName =
           (userDoc.data()?['name'] as String?) ?? user.email ?? 'Customer';
 
-      final items = cart.items
+      final itemsData = itemsToPurchase
           .map((item) => {
                 'productId': item.product.id,
                 'productName': item.product.productName,
+                'selectedSize': item.selectedSize,
                 'price': item.product.price,
                 'quantity': item.quantity,
               })
           .toList();
 
-      final total = double.parse(cart.items
+      final total = double.parse(itemsToPurchase
           .fold<double>(
               0, (runningTotal, i) => runningTotal + i.product.price * i.quantity)
           .toStringAsFixed(2));
@@ -161,27 +167,35 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'notes': _notesController.text.trim(),
         'paymentMethod': _selectedPaymentMethod,
         'paymentStatus': _selectedPaymentMethod == 'Cash on Delivery (COD)' ? 'Unpaid' : 'Paid (Simulated)',
-        'items': items,
+        'items': itemsData,
         'total': total,
         'status': 'pending',
         'timestamp': FieldValue.serverTimestamp(),
       });
 
-      // Deduct stock and check for Out of Stock (0) automatic alerts for Admin
-      for (final item in cart.items) {
+      // Deduct stock per size and check for Out of Stock (0) automatic alerts for Admin
+      for (final item in itemsToPurchase) {
         final productRef = FirebaseFirestore.instance.collection('products').doc(item.product.id);
         final productSnap = await productRef.get();
         if (productSnap.exists) {
-          final currentStock = (productSnap.data()?['stock'] as num?)?.toInt() ?? item.product.stock;
-          final newStock = currentStock - item.quantity < 0 ? 0 : currentStock - item.quantity;
+          final data = productSnap.data() ?? {};
+          final Map<String, dynamic> sizesData = Map<String, dynamic>.from(data['sizes'] ?? {});
+          final currentSizeStock = (sizesData[item.selectedSize] as num?)?.toInt() ?? 0;
+          final newSizeStock = currentSizeStock - item.quantity < 0 ? 0 : currentSizeStock - item.quantity;
+          sizesData[item.selectedSize] = newSizeStock;
 
-          await productRef.update({'stock': newStock});
+          final newTotalStock = sizesData.values.fold<int>(0, (totalSum, val) => totalSum + ((val as num?)?.toInt() ?? 0));
 
-          if (newStock == 0) {
+          await productRef.update({
+            'sizes': sizesData,
+            'stock': newTotalStock,
+          });
+
+          if (newSizeStock == 0) {
             await FirebaseFirestore.instance.collection('notifications').add({
               'userId': 'admin',
-              'title': '⚠️ Out of Stock Alert!',
-              'body': 'Product "${item.product.productName}" is now out of stock (0 remaining) after a customer purchase.',
+              'title': '⚠️ Size Out of Stock Alert!',
+              'body': 'Product "${item.product.productName}" (Size: ${item.selectedSize}) is now out of stock (0 remaining) after a customer purchase.',
               'type': 'out_of_stock',
               'productId': item.product.id,
               'isRead': false,
@@ -202,9 +216,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'timestamp': FieldValue.serverTimestamp(),
       });
 
-      logInfo('Checkout', 'Order ${ref.id} saved (${items.length} items, total ₱$total)');
+      logInfo('Checkout', 'Order ${ref.id} saved (${itemsToPurchase.length} items, total ₱$total)');
 
-      cart.clear();
+      if (!isDirectPurchase) cart?.clear();
+      
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -239,6 +254,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartProvider>();
+    final isDirectPurchase = widget.directItems != null;
+    final itemsToDisplay = widget.directItems ?? cart.items;
+    final totalAmount = isDirectPurchase
+        ? itemsToDisplay.fold<double>(
+            0, (totalSum, i) => totalSum + i.product.price * i.quantity)
+        : cart.totalAmount;
 
     return Scaffold(
       appBar: AppBar(
@@ -349,7 +370,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Total Items:'),
-                        Text('${cart.items.length}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text('${itemsToDisplay.length}', style: const TextStyle(fontWeight: FontWeight.bold)),
                       ],
                     ),
                     const Divider(height: 20),
@@ -358,7 +379,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       children: [
                         const Text('Total Amount:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                         Text(
-                          '₱${cart.totalAmount.toStringAsFixed(2)}',
+                          '₱${totalAmount.toStringAsFixed(2)}',
                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.indigo.shade700),
                         ),
                       ],
@@ -376,7 +397,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
-                  onPressed: _isLoading ? null : () => _submitOrder(cart),
+                  onPressed: _isLoading ? null : () => _submitOrder(isDirectPurchase ? null : cart),
                   child: _isLoading
                       ? const SizedBox(
                           width: 24,

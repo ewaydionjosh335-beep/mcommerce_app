@@ -124,8 +124,10 @@ class NotificationsScreen extends StatelessWidget {
                   elevation: isRead ? 1 : 3,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   color: isRead ? Colors.white : Colors.indigo.shade50.withValues(alpha: 0.6),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     leading: CircleAvatar(
                       backgroundColor: type == 'promo' ? Colors.orange.shade100 : Colors.indigo.shade100,
                       child: Icon(icon, color: type == 'promo' ? Colors.orange.shade800 : Colors.indigo.shade800),
@@ -168,6 +170,7 @@ class NotificationsScreen extends StatelessWidget {
                     },
                   ),
                 ),
+              ),
               );
             },
           );

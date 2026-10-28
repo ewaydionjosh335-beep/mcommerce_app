@@ -191,29 +191,32 @@ class _NotificationsSectionState extends State<NotificationsSection> {
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Colors.red.shade100,
-                        child: const Icon(Icons.warning_amber_rounded, color: Colors.red),
-                      ),
-                      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 4),
-                          Text(body),
-                          const SizedBox(height: 4),
-                          Text(timeStr, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-                        ],
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.grey),
-                        onPressed: () async {
-                          await FirebaseFirestore.instance
-                              .collection('notifications')
-                              .doc(docs[index].id)
-                              .delete();
-                        },
+                    child: Material(
+                      color: Colors.transparent,
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.red.shade100,
+                          child: const Icon(Icons.warning_amber_rounded, color: Colors.red),
+                        ),
+                        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            Text(body),
+                            const SizedBox(height: 4),
+                            Text(timeStr, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                          ],
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.grey),
+                          onPressed: () async {
+                            await FirebaseFirestore.instance
+                                .collection('notifications')
+                                .doc(docs[index].id)
+                                .delete();
+                          },
+                        ),
                       ),
                     ),
                   );

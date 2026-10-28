@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../screens/login_screen.dart';
 import '../providers/theme_provider.dart';
+import '../utils/app_theme.dart';
 import 'analytics_dashboard_section.dart';
 import 'inventory_section.dart';
 import 'orders_section.dart';
@@ -10,7 +11,6 @@ import 'product_management.dart';
 import 'users_section.dart';
 import 'notifications_section.dart';
 
-// HOA04 Step 1: Dashboard layout (sidebar + Analytics / Products / Inventory / Orders / Users / Notifications sections)
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
 
@@ -58,62 +58,127 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  // Sidebar: permanent on wide screens, inside a Drawer on narrow screens
   Widget _buildSidebar({required bool inDrawer}) {
-    final primary = Theme.of(context).colorScheme.primary;
-    final onPrimary = Theme.of(context).colorScheme.onPrimary;
-    return Material(
-      color: primary,
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final backgroundColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final primaryColor = theme.colorScheme.primary;
+    final textColor = isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
+
+    return Container(
+      color: backgroundColor,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.s24),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: borderColor)),
+              ),
               child: Row(
                 children: [
-                  Icon(Icons.admin_panel_settings_outlined, color: onPrimary),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Admin Panel',
-                    style: TextStyle(
-                      color: onPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.s8),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    child: Icon(Icons.admin_panel_settings, color: primaryColor, size: 24),
+                  ),
+                  const SizedBox(width: AppSpacing.s12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Chopify',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
+                      ),
+                      Text(
+                        'Admin Portal',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: textColor.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-            for (var i = 0; i < _titles.length; i++)
-              ListTile(
-                leading: Icon(_icons[i]),
-                title: Text(_titles[i]),
-                selected: _index == i,
-                iconColor: onPrimary.withValues(alpha: 0.7),
-                textColor: onPrimary.withValues(alpha: 0.7),
-                selectedColor: onPrimary,
-                selectedTileColor: onPrimary.withValues(alpha: 0.2),
-                onTap: () {
-                  setState(() => _index = i);
-                  if (inDrawer) Navigator.pop(context);
+            const SizedBox(height: AppSpacing.s16),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12),
+                itemCount: _titles.length,
+                itemBuilder: (context, i) {
+                  final selected = _index == i;
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: AppSpacing.s4),
+                    decoration: BoxDecoration(
+                      color: selected ? primaryColor.withValues(alpha: 0.1) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: ListTile(
+                        leading: Icon(
+                          _icons[i],
+                          color: selected ? primaryColor : textColor.withValues(alpha: 0.7),
+                          size: 22,
+                        ),
+                        title: Text(
+                          _titles[i],
+                          style: TextStyle(
+                            color: selected ? primaryColor : textColor.withValues(alpha: 0.8),
+                            fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        onTap: () {
+                          setState(() => _index = i);
+                          if (inDrawer) Navigator.pop(context);
+                        },
+                      ),
+                    ),
+                  );
                 },
               ),
-             const Spacer(),
-            SwitchListTile(
-              title: Text('Dark Mode', style: TextStyle(color: onPrimary.withValues(alpha: 0.7), fontSize: 14)),
-              secondary: Icon(Icons.dark_mode_outlined, color: onPrimary.withValues(alpha: 0.7)),
-              value: context.watch<ThemeProvider>().isDarkMode,
-              onChanged: (val) {
-                context.read<ThemeProvider>().setTheme(val);
-              },
             ),
-            ListTile(
-              leading: const Icon(Icons.logout_outlined),
-              title: const Text('Logout'),
-              iconColor: onPrimary.withValues(alpha: 0.7),
-              textColor: onPrimary.withValues(alpha: 0.7),
-              onTap: _logout,
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.s16),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: borderColor)),
+              ),
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    title: Text('Dark Mode', style: TextStyle(color: textColor.withValues(alpha: 0.8), fontSize: 14, fontWeight: FontWeight.w500)),
+                    secondary: Icon(Icons.dark_mode_outlined, color: textColor.withValues(alpha: 0.8), size: 20),
+                    value: context.watch<ThemeProvider>().isDarkMode,
+                    onChanged: (val) {
+                      context.read<ThemeProvider>().setTheme(val);
+                    },
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  const SizedBox(height: AppSpacing.s8),
+                  Material(
+                    color: Colors.transparent,
+                    child: ListTile(
+                      leading: const Icon(Icons.logout_outlined, color: AppColors.danger, size: 20),
+                      title: const Text('Logout', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600, fontSize: 14)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                      onTap: _logout,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -125,26 +190,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 800;
+        final wide = constraints.maxWidth >= 900;
 
         final content = Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (wide) ...[
-                Text(
-                  _titles[_index],
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-              ],
-              Expanded(child: _section()),
-            ],
-          ),
+          padding: const EdgeInsets.all(AppSpacing.s24),
+          child: _section(),
         );
 
         if (wide) {
@@ -152,16 +202,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
             body: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SizedBox(width: 240, child: _buildSidebar(inDrawer: false)),
-                Expanded(child: content),
+                SizedBox(width: 260, child: _buildSidebar(inDrawer: false)),
+                Expanded(
+                  child: Container(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    child: content,
+                  ),
+                ),
               ],
             ),
           );
         }
 
         return Scaffold(
-          appBar: AppBar(title: Text(_titles[_index])),
-          drawer: Drawer(child: _buildSidebar(inDrawer: true)),
+          appBar: AppBar(
+            title: Text(_titles[_index]),
+          ),
+          drawer: SizedBox(width: 280, child: Drawer(child: _buildSidebar(inDrawer: true))),
           body: content,
         );
       },

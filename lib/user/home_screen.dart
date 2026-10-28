@@ -25,6 +25,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  bool _isLoggingIn = false;
   late final Stream<List<Product>> _productsStream =
       ProductService().getProducts();
 
@@ -322,12 +323,24 @@ class _HomeScreenState extends State<HomeScreen> {
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                 ),
-                icon: const Icon(Icons.login, size: 18),
+                icon: _isLoggingIn
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.login, size: 18),
                 label: const Text('Log In / Register'),
-                onPressed: () async {
-                  await LoginScreen.showAsModal(context);
-                  setState(() {});
-                },
+                onPressed: _isLoggingIn
+                    ? null
+                    : () async {
+                        setState(() => _isLoggingIn = true);
+                        try {
+                          await LoginScreen.showAsModal(context);
+                        } finally {
+                          if (mounted) setState(() => _isLoggingIn = false);
+                        }
+                      },
               ),
             ),
           ] else ...[
