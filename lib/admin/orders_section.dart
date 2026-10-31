@@ -15,11 +15,13 @@ class OrdersSection extends StatefulWidget {
 
 class _OrdersSectionState extends State<OrdersSection> {
   static const _statuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+  final Map<String, String> _optimisticStatuses = {};
 
   final Stream<QuerySnapshot<Map<String, dynamic>>> _orders = FirebaseFirestore
       .instance
       .collection('orders')
       .orderBy('timestamp', descending: true)
+      .limit(100)
       .snapshots()
       .map((snapshot) {
     logInfo('Orders',
@@ -56,6 +58,19 @@ class _OrdersSectionState extends State<OrdersSection> {
   }
 
   Future<void> _updateStatus(String orderId, String status) async {
+    String? originalServerStatus;
+    try {
+      final orderDoc = await FirebaseFirestore.instance
+          .collection('orders')
+          .doc(orderId)
+          .get();
+      originalServerStatus = (orderDoc.data()?['status'] ?? 'pending').toString().toLowerCase();
+    } catch (_) {}
+
+    setState(() {
+      _optimisticStatuses[orderId] = status;
+    });
+
     try {
       final orderDoc = await FirebaseFirestore.instance
           .collection('orders')
@@ -107,11 +122,36 @@ class _OrdersSectionState extends State<OrdersSection> {
       logInfo('Orders', 'Order $orderId status -> $status');
     } on FirebaseException catch (e, s) {
       logError('Orders', e, s);
+      setState(() {
+        if (originalServerStatus != null) {
+          _optimisticStatuses[orderId] = originalServerStatus;
+        } else {
+          _optimisticStatuses.remove(orderId);
+        }
+      });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.message ?? 'Failed to update status'),
+          content: Text(e.message ?? 'Failed to update status. Rolled back.'),
           behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    } catch (e, s) {
+      logError('Orders', e, s);
+      setState(() {
+        if (originalServerStatus != null) {
+          _optimisticStatuses[orderId] = originalServerStatus;
+        } else {
+          _optimisticStatuses.remove(orderId);
+        }
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to update status. Rolled back.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red,
         ),
       );
     }
@@ -154,7 +194,7 @@ class _OrdersSectionState extends State<OrdersSection> {
                   final doc = docs[index];
                   final data = doc.data();
                   final total = ((data['total'] as num?) ?? 0).toDouble();
-                  final raw = (data['status'] ?? 'pending').toString().toLowerCase();
+                  final raw = _optimisticStatuses[doc.id] ?? (data['status'] ?? 'pending').toString().toLowerCase();
                   final status = _statuses.contains(raw) ? raw : 'pending';
 
                   return Card(
@@ -231,7 +271,7 @@ class _OrdersSectionState extends State<OrdersSection> {
                       rows: docs.map((doc) {
                         final data = doc.data();
                         final total = ((data['total'] as num?) ?? 0).toDouble();
-                        final raw =
+                        final raw = _optimisticStatuses[doc.id] ??
                             (data['status'] ?? 'pending').toString().toLowerCase();
                         final status = _statuses.contains(raw) ? raw : 'pending';
 

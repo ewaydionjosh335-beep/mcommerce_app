@@ -34,6 +34,12 @@ class _HomeScreenState extends State<HomeScreen> {
   String _selectedCategory = 'All';
   String _sortBy = 'Default';
 
+  List<Product>? _cachedAllProducts;
+  String? _cachedSearchQuery;
+  String? _cachedCategory;
+  String? _cachedSortBy;
+  List<Product>? _cachedFilteredProducts;
+
   final List<String> _categories = [
     'All',
     'Electronics',
@@ -70,29 +76,44 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         final allProducts = snapshot.data ?? [];
 
-        // 1. Filter by category
-        var filtered = _selectedCategory == 'All'
-            ? allProducts
-            : allProducts.where((p) => p.category.toLowerCase() == _selectedCategory.toLowerCase()).toList();
+        List<Product> filtered;
+        if (_cachedAllProducts == allProducts &&
+            _cachedSearchQuery == _searchQuery &&
+            _cachedCategory == _selectedCategory &&
+            _cachedSortBy == _sortBy &&
+            _cachedFilteredProducts != null) {
+          filtered = _cachedFilteredProducts!;
+        } else {
+          // 1. Filter by category
+          filtered = _selectedCategory == 'All'
+              ? allProducts
+              : allProducts.where((p) => p.category.toLowerCase() == _selectedCategory.toLowerCase()).toList();
 
-        // 2. Filter by search query
-        if (_searchQuery.trim().isNotEmpty) {
-          final q = _searchQuery.trim().toLowerCase();
-          filtered = filtered.where((p) =>
-              p.productName.toLowerCase().contains(q) ||
-              p.description.toLowerCase().contains(q) ||
-              p.category.toLowerCase().contains(q)).toList();
-        }
+          // 2. Filter by search query
+          if (_searchQuery.trim().isNotEmpty) {
+            final q = _searchQuery.trim().toLowerCase();
+            filtered = filtered.where((p) =>
+                p.productName.toLowerCase().contains(q) ||
+                p.description.toLowerCase().contains(q) ||
+                p.category.toLowerCase().contains(q)).toList();
+          }
 
-        // 3. Sort
-        if (_sortBy == 'Price: Low to High') {
-          filtered.sort((a, b) => a.price.compareTo(b.price));
-        } else if (_sortBy == 'Price: High to Low') {
-          filtered.sort((a, b) => b.price.compareTo(a.price));
-        } else if (_sortBy == 'Name: A to Z') {
-          filtered.sort((a, b) => a.productName.compareTo(b.productName));
-        } else if (_sortBy == 'Stock: High to Low') {
-          filtered.sort((a, b) => b.stock.compareTo(a.stock));
+          // 3. Sort
+          if (_sortBy == 'Price: Low to High') {
+            filtered.sort((a, b) => a.price.compareTo(b.price));
+          } else if (_sortBy == 'Price: High to Low') {
+            filtered.sort((a, b) => b.price.compareTo(a.price));
+          } else if (_sortBy == 'Name: A to Z') {
+            filtered.sort((a, b) => a.productName.compareTo(b.productName));
+          } else if (_sortBy == 'Stock: High to Low') {
+            filtered.sort((a, b) => b.stock.compareTo(a.stock));
+          }
+
+          _cachedAllProducts = allProducts;
+          _cachedSearchQuery = _searchQuery;
+          _cachedCategory = _selectedCategory;
+          _cachedSortBy = _sortBy;
+          _cachedFilteredProducts = filtered;
         }
 
         return CustomScrollView(
@@ -301,8 +322,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = FirebaseAuth.instance.currentUser;
     final isGuest = user == null;
 
-    final cartItemCount = isGuest ? 0 : context.watch<CartProvider>().items.length;
-    final wishlistCount = isGuest ? 0 : context.watch<WishlistProvider>().items.length;
+    final cartItemCount = isGuest ? 0 : context.select<CartProvider, int>((p) => p.items.length);
+    final wishlistCount = isGuest ? 0 : context.select<WishlistProvider, int>((p) => p.items.length);
 
     const titles = ['Chopify', 'My Wishlist', 'My Shopping Cart', 'My Orders', 'My Profile'];
 

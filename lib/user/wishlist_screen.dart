@@ -74,6 +74,8 @@ class WishlistScreen extends StatelessWidget {
                                             child: Image.network(
                                               product.imageUrl,
                                               fit: BoxFit.cover,
+                                              cacheWidth: 200,
+                                              cacheHeight: 200,
                                               errorBuilder: (context, error, stackTrace) => Container(
                                                 color: Colors.grey.shade100,
                                                 child: const Icon(Icons.image_not_supported),

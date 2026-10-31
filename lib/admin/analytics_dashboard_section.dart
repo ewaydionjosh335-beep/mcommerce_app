@@ -13,9 +13,9 @@ class AnalyticsDashboardSection extends StatelessWidget {
 
     return FutureBuilder<List<QuerySnapshot<Map<String, dynamic>>>>(
       future: Future.wait([
-        db.collection('orders').get(),
-        db.collection('products').get(),
-        db.collection('users').get(),
+        db.collection('orders').limit(200).get(),
+        db.collection('products').limit(200).get(),
+        db.collection('users').limit(200).get(),
       ]),
       builder: (context, snapshot) {
         if (snapshot.hasError) {

@@ -13,7 +13,7 @@ class UsersSection extends StatefulWidget {
 
 class _UsersSectionState extends State<UsersSection> {
   final Stream<QuerySnapshot<Map<String, dynamic>>> _users =
-      FirebaseFirestore.instance.collection('users').snapshots();
+      FirebaseFirestore.instance.collection('users').limit(100).snapshots();
 
   final _searchController = TextEditingController();
   String _searchQuery = '';

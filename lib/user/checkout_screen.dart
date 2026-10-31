@@ -173,8 +173,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'timestamp': FieldValue.serverTimestamp(),
       });
 
-      // Deduct stock per size and check for Out of Stock (0) automatic alerts for Admin
-      for (final item in itemsToPurchase) {
+      // Deduct stock per size and check for Out of Stock (0) automatic alerts for Admin in parallel
+      await Future.wait(itemsToPurchase.map((item) async {
         final productRef = FirebaseFirestore.instance.collection('products').doc(item.product.id);
         final productSnap = await productRef.get();
         if (productSnap.exists) {
@@ -203,7 +203,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             });
           }
         }
-      }
+      }));
 
       final shortId = ref.id.substring(0, ref.id.length > 8 ? 8 : ref.id.length);
       await FirebaseFirestore.instance.collection('notifications').add({

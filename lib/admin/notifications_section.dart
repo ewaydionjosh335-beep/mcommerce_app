@@ -150,6 +150,7 @@ class _NotificationsSectionState extends State<NotificationsSection> {
                 .collection('notifications')
                 .where('userId', isEqualTo: 'admin')
                 .orderBy('timestamp', descending: true)
+                .limit(50)
                 .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.hasError) {

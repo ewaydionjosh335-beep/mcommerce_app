@@ -45,6 +45,8 @@ class ProductCard extends StatelessWidget {
                       child: Image.network(
                         product.imageUrl,
                         fit: BoxFit.cover,
+                        cacheWidth: 400,
+                        cacheHeight: 400,
                         errorBuilder: (context, error, stackTrace) =>
                             const Center(child: Icon(Icons.image_not_supported, color: Colors.grey)),
                       ),

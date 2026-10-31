@@ -90,3 +90,113 @@ This document outlines the complete architectural mapping, static analysis findi
 - [x] **File:** `lib/admin/product_management.dart` & `OrdersSection.dart`  
   *Problem:* DataTables inside `SingleChildScrollView(scrollDirection: Axis.horizontal)` force horizontal scrolling on narrower admin screens.  
   *Proposed Fix:* Implement responsive column visibility or card-based list views for smaller admin viewports.
+
+---
+
+## Phase 7: Performance tune-up
+
+Ordered by expected impact (biggest speed gain first).
+
+- [x] **File:** `lib/user/home_screen.dart` (Line 352)  
+  *Problem:* Products stream listens to entire `products` collection with no `limit()`/pagination; filtering/sorting run on every snapshot.  
+  *Proposed Fix:* Add Firestore pagination (`limit` + `startAfterDocument`) and lazy-load via `ListView.builder`; move filter/sort into a debounced notifier.
+
+- [x] **File:** `lib/admin/users_section.dart` (Line 16)  
+  *Problem:* `collection('users').snapshots()` streams whole user base with no limit; renders all rows.  
+  *Proposed Fix:* Paginate with `limit(20)` + cursor; use `ListView.builder`/`DataTable` with virtualization.
+
+- [x] **File:** `lib/admin/orders_section.dart` (Line 23)  
+  *Problem:* Orders stream has no limit; customer name resolved per row via extra reads.  
+  *Proposed Fix:* Add `limit()` + pagination; denormalize customer name (already partial); cache name lookups.
+
+- [x] **File:** `lib/admin/analytics_dashboard_section.dart` (Lines 13-21, 89)  
+  *Problem:* Triple nested StreamBuilders + `shrinkWrap: true` rebuild whole dashboard on any change.  
+  *Proposed Fix:* Combine into one aggregated stream/viewmodel; use `SliverList`/lazy children; avoid shrinkWrap.
+
+- [x] **File:** `lib/admin/notifications_section.dart` (Lines 153, 179)  
+  *Problem:* `shrinkWrap: true` + `NeverScrollableScrollPhysics()` nested list; whole-collection stream.  
+  *Proposed Fix:* Convert to sliver list; add `limit()` to alerts stream.
+
+- [ ] **File:** `lib/widgets/product_card.dart` (Line 45) and `lib/user/*` Image.network usages  
+  *Problem:* Network images without caching/sizing; repeated downloads and large decodes.  
+  *Proposed Fix:* Add `cacheWidth`/`cacheHeight` (or `cached_network_image`) and proper fit; reuse placeholders.
+
+- [ ] **File:** `lib/user/product_details_screen.dart` (Line 118)  
+  *Problem:* Gallery loads full-res images; no cache sizing.  
+  *Proposed Fix:* Provide resized variants / cache dimensions; lazy-load thumbnails.
+
+- [ ] **File:** `lib/user/home_screen.dart` (Lines 303-304) and providers  
+  *Problem:* Broad `context.watch` rebuilds entire home on cart/wishlist changes.  
+  *Proposed Fix:* Select only needed slices (e.g., item count) via `Selector`/`context.select`.
+
+- [ ] **File:** `lib/main.dart` (Lines 14-51)  
+  *Problem:* Firebase init blocks startup; no deferred service init.  
+  *Proposed Fix:* Keep init minimal; defer non-critical services; show splash while initializing.
+
+- [ ] **File:** `pubspec.yaml`  
+  *Problem:* `cupertino_icons`/`google_fonts` possibly unused or heavy; verify usage.  
+  *Proposed Fix:* Remove unused deps; subset fonts if kept.
+
+- [ ] **File:** `lib/user/my_orders_screen.dart` (Line 125), `lib/user/notifications_screen.dart` (Line 48), `lib/user/product_reviews_section.dart` (Line 27)  
+  *Problem:* Whole-collection streams without limit/pagination.  
+  *Proposed Fix:* Add `limit()` and "load more" pagination; scope by user.
+
+- [ ] **File:** `lib/providers/wishlist_provider.dart` (Line 48)  
+  *Problem:* Listens to entire wishlist subcollection; rebuilds all.  
+  *Proposed Fix:* Paginate; debounce writes; notify listeners narrowly.
+
+---
+
+## Phase 8: Speed and smoothness (Audit Findings)
+
+Goal: Make taps and screen transitions feel instant and smooth across mobile and admin. Ordered by expected impact.
+
+- [x] **File:** `lib/user/home_screen.dart` (Lines 61-95)  
+  *Problem:* Filtering, searching, and sorting the entire product list on every UI frame/snapshot event on the main UI thread.  
+  *Proposed Fix:* Move filtering and sorting into a debounced ChangeNotifier or compute isolate; cache sorted/filtered results.  
+  *Risk Level:* Medium
+
+- [x] **File:** `lib/user/checkout_screen.dart` (Lines 132-209)  
+  *Problem:* Awaiting multiple Firebase product gets, stock updates, and order placement sequentially before showing success feedback and navigating.  
+  *Proposed Fix:* Perform order placement asynchronously with immediate navigation to success/orders screen (optimistic flow) and background processing.  
+  *Risk Level:* Medium
+
+- [x] **File:** `lib/widgets/product_card.dart`, `lib/user/cart_screen.dart`, `lib/user/wishlist_screen.dart`, `lib/user/product_details_screen.dart` (Image usages)  
+  *Problem:* Using raw `Image.network` without `cacheWidth`/`cacheHeight` or `cached_network_image`, causing full-res decodes and re-downloads in lists.  
+  *Proposed Fix:* Integrate `cached_network_image` with explicit `memCacheWidth`/`memCacheHeight` on thumbnails and detail galleries.  
+  *Risk Level:* Low
+
+- [x] **File:** `lib/admin/orders_section.dart` (Lines 56-97)  
+  *Problem:* Order status updates and stock deduction await Firestore completion synchronously before updating the UI status badge or row.  
+  *Proposed Fix:* Implement optimistic UI updates for status changes with rollback on failure.  
+  *Risk Level:* Medium
+
+- [x] **File:** `lib/user/home_screen.dart` (Lines 303-304) & `lib/user/cart_screen.dart`  
+  *Problem:* Broad `context.watch<CartProvider>()` causes entire screen/scaffold to rebuild on any cart quantity change.  
+  *Proposed Fix:* Use `Selector` or `context.select` to rebuild only the badge/price widgets.  
+  *Risk Level:* Low
+
+- **File:** `lib/main.dart` (Lines 14-51)  
+  *Problem:* Synchronous initialization sequence in main blocks initial frame rendering before first screen appears.  
+  *Proposed Fix:* Defer non-critical service initializations and display native splash/loading indicator immediately.  
+  *Risk Level:* Low
+
+- **File:** `lib/admin/users_section.dart` (Lines 155-175) & `lib/user/my_orders_screen.dart`  
+  *Problem:* Screen transitions and initial data loads display full-screen `CircularProgressIndicator` without shimmer/skeleton placeholders.  
+  *Proposed Fix:* Replace full-screen spinners with skeleton loading placeholders matching list row layouts.  
+  *Risk Level:* Low
+
+- **File:** `lib/admin/orders_section.dart` (Lines 197-214)  
+  *Problem:* Customer name resolved per DataTable row via individual `FutureBuilder` lookups causing redundant reads and frame jank during fast scrolling.  
+  *Proposed Fix:* Denormalize customer name in order docs or cache customer names in-memory.  
+  *Risk Level:* Low
+
+- **File:** `lib/user/home_screen.dart` & `lib/admin/admin_dashboard.dart` (Scroll physics & transitions)  
+  *Problem:* Default scroll physics and page transitions can feel abrupt on mobile/web.  
+  *Proposed Fix:* Apply smooth `BouncingScrollPhysics` (iOS) / `ClampingScrollPhysics` (Android) and custom page route transitions.  
+  *Risk Level:* Low
+
+- **File:** `lib/services/product_service.dart` & repositories (Data caching)  
+  *Problem:* Screens refetch catalog products and categories every time they are opened without in-memory caching.  
+  *Proposed Fix:* Implement a shared in-memory repository cache with TTL for static catalog data.  
+  *Risk Level:* Medium
